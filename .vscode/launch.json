@@ -1,0 +1,61 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "C#: Sorter Debug",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build-sorter",
+            "program": "${workspaceFolder}/Sorter/bin/Debug/net8.0/Sorter.dll",
+            "args": [
+                "-input",
+                "data/generated_data.txt",
+                "-output",
+                "data/sorted_data.txt",
+                "-bufferSizeMB",
+                "1024",
+                "-maxParallelism",
+                "16"
+            ],
+            "cwd": "${workspaceFolder}",
+            "console": "internalConsole",
+            "stopAtEntry": false
+        },
+        {
+            "name": "C#: Sorter Release",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build-sorter-release",
+            "program": "${workspaceFolder}/Sorter/bin/Release/net8.0/Sorter.dll",
+            "args": [
+                "-input",
+                "data/generated_data.txt",
+                "-output",
+                "data/sorted_data.txt",
+                "-bufferSizeMB",
+                "1024",
+                "-maxParallelism",
+                "16"
+            ],
+            "cwd": "${workspaceFolder}",
+            "console": "internalConsole",
+            "stopAtEntry": false
+        },
+        {
+            "name": "C#: Generator Debug",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build-generator",
+            "program": "${workspaceFolder}/Generator/bin/Debug/net8.0/Generator.dll",
+            "args": [
+                "-path",
+                "data/generated_data.txt",
+                "-gbsize",
+                "10",
+            ],
+            "cwd": "${workspaceFolder}",
+            "console": "internalConsole",
+            "stopAtEntry": false
+        }
+    ]
+}
