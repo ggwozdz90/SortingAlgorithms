@@ -1,3 +1,5 @@
+using System.Text;
+
 namespace SortingAlgorithms.External;
 
 /// <summary>
@@ -27,6 +29,8 @@ public class MergeManager<T>(
     {
         var readers = new List<StreamReader>();
         var buffers = new List<Queue<T>>();
+        var fileBufferSize = bufferSize / chunkFiles.Count;
+        var outputFileBuffer = 64 * 1024 * 1024;
 
         try
         {
@@ -37,49 +41,50 @@ public class MergeManager<T>(
                 buffers.Add(new Queue<T>());
             }
 
-            using var outputStream = new StreamWriter(output);
+            using var outputStream = new StreamWriter(output, false, Encoding.UTF8, outputFileBuffer);
 
             for (var i = 0; i < readers.Count; i++)
-                FillBuffer(readers[i], buffers[i]);
+                FillBuffer(readers[i], buffers[i], fileBufferSize);
 
-            while (readers.Count > 0)
+            var minHeap = new SortedSet<(T value, int index)>();
+
+            for (var i = 0; i < buffers.Count; i++)
+                if (buffers[i].Count > 0)
+                    minHeap.Add((buffers[i].Peek(), i));
+
+            while (minHeap.Count > 0)
             {
-                T smallest = default;
-                var smallestIndex = -1;
-
-                for (var i = 0; i < buffers.Count; i++)
-                    if (buffers[i].Count > 0)
-                        if (smallest == null || buffers[i].Peek().CompareTo(smallest) < 0)
-                        {
-                            smallest = buffers[i].Peek();
-                            smallestIndex = i;
-                        }
-
-                if (smallestIndex == -1)
-                    break;
+                var (_, smallestIndex) = minHeap.Min;
+                minHeap.Remove(minHeap.Min);
 
                 outputStream.WriteLine(buffers[smallestIndex].Dequeue());
 
-                if (buffers[smallestIndex].Count != 0)
-                    continue;
+                if (buffers[smallestIndex].Count > 0)
+                {
+                    minHeap.Add((buffers[smallestIndex].Peek(), smallestIndex));
+                }
+                else
+                {
+                    FillBuffer(readers[smallestIndex], buffers[smallestIndex], fileBufferSize);
 
-                FillBuffer(readers[smallestIndex], buffers[smallestIndex]);
-
-                if (buffers[smallestIndex].Count != 0)
-                    continue;
-
-                readers[smallestIndex].Dispose();
-                readers.RemoveAt(smallestIndex);
-                buffers.RemoveAt(smallestIndex);
-
-                File.Delete(chunkFiles[smallestIndex]);
-                chunkFiles.RemoveAt(smallestIndex);
+                    if (buffers[smallestIndex].Count > 0)
+                    {
+                        minHeap.Add((buffers[smallestIndex].Peek(), smallestIndex));
+                    }
+                    else
+                    {
+                        readers[smallestIndex].Dispose();
+                    }
+                }
             }
         }
         finally
         {
             foreach (var reader in readers)
                 reader.Dispose();
+
+            foreach (var file in chunkFiles)
+                File.Delete(file);
         }
     }
 
@@ -88,11 +93,19 @@ public class MergeManager<T>(
     /// </summary>
     /// <param name="reader">The StreamReader to read data from.</param>
     /// <param name="buffer">The buffer to fill with parsed objects.</param>
+    /// <param name="fileBufferSize">The maximum size of the buffer in bytes.</param>
     private void FillBuffer(
         StreamReader reader,
-        Queue<T> buffer)
+        Queue<T> buffer,
+        long fileBufferSize)
     {
-        for (var i = 0; i < bufferSize && !reader.EndOfStream; i++)
-            buffer.Enqueue(lineToObjectParser(reader.ReadLine()));
+        for (var i = 0; i < fileBufferSize && !reader.EndOfStream;)
+        {
+            var line = reader.ReadLine();
+            var lineSize = Encoding.UTF8.GetByteCount(line ?? string.Empty);
+            var entry = lineToObjectParser(line);
+            buffer.Enqueue(entry);
+            i += lineSize;
+        }
     }
 }

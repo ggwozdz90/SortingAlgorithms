@@ -51,7 +51,7 @@
                 "-path",
                 "data/generated_data.txt",
                 "-gbsize",
-                "10",
+                "5",
             ],
             "cwd": "${workspaceFolder}",
             "console": "internalConsole",
